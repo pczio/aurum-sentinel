@@ -1,0 +1,12 @@
+{
+  "name": "AurumSentinel · Gold Wealth MVP",
+  "short_name": "AurumSentinel",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f131c",
+  "theme_color": "#0f131c",
+  "description": "Mô phỏng tích sản và quản lý két vàng cá nhân",
+  "lang": "vi",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

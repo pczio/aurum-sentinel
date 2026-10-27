@@ -1,0 +1,30 @@
+{
+    "name":  "aurumsentinel-cloudflare-mvp",
+    "version":  "2.0.0",
+    "private":  true,
+    "description":  "Desktop-first AurumSentinel dashboard with live gold prices and a Cloudflare API",
+    "engines":  {
+                    "node":  "\u003e=22"
+                },
+    "scripts":  {
+                    "start":  "node scripts/preview.mjs --open",
+                    "build":  "node scripts/build.mjs",
+                    "test":  "node --test test-web/*.test.mjs",
+                    "preview":  "node scripts/preview.mjs",
+                    "predeploy":  "npm run build",
+                    "deploy":  "wrangler deploy",
+                    "deploy:prebuilt":  "wrangler deploy",
+                    "predeploy:pages":  "npm run build",
+                    "deploy:pages":  "wrangler pages deploy --cwd pages --branch main",
+                    "deploy:pages:prebuilt":  "wrangler pages deploy --cwd pages --branch main",
+                    "preview:cloudflare":  "wrangler dev --ip 127.0.0.1 --port 8789",
+                    "test:flutter":  "flutter test",
+                    "preview:pages":  "wrangler pages dev --cwd pages --ip 127.0.0.1 --port 8790",
+                    "prestart":  "node scripts/build.mjs",
+                    "prepreview":  "node scripts/build.mjs"
+                },
+    "devDependencies":  {
+                            "wrangler":  "4.153.0"
+                        },
+    "type":  "module"
+}

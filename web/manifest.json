@@ -1,0 +1,18 @@
+{
+    "background_color":  "#101318",
+    "short_name":  "AurumSentinel",
+    "icons":  [
+                  {
+                      "purpose":  "any",
+                      "type":  "image/svg+xml",
+                      "sizes":  "any",
+                      "src":  "favicon.svg"
+                  }
+              ],
+    "lang":  "vi",
+    "theme_color":  "#101318",
+    "display":  "standalone",
+    "name":  "AurumSentinel — Không gian tích sản vàng",
+    "scope":  "/",
+    "start_url":  "/"
+}
