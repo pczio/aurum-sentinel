@@ -30,6 +30,8 @@ npm start
 | Lịch sử 7/14/30 ngày | vang.today | Điểm giá theo ngày; ngày hiện tại chưa chốt, không phải tick intraday |
 | USD/VND | XML công khai Vietcombank | Giá USD bán ra; server lấy tối đa mỗi 5 phút |
 | Tỷ giá dự phòng | [Currency API](https://github.com/fawazahmed0/exchange-api) | Chỉ khi Vietcombank không phản hồi; theo ngày, có nhãn riêng |
+| Tin vàng & kim loại quý | [Vietstock RSS](https://vietstock.vn/rss) | RSS chuyên mục vàng; kiểm tra mỗi 5 phút, ưu tiên tin hôm nay |
+| Fed & lãi suất | [Federal Reserve RSS](https://www.federalreserve.gov/feeds/feeds.htm) | Thông cáo chính sách tiền tệ chính thức; kiểm tra mỗi 5 phút |
 
 Trang kiểm tra giá mỗi 30 giây khi đang mở. Mỗi nguồn có cache riêng để tránh gọi dồn. Có mốc cập nhật do nguồn cung cấp dưới từng giá. Không tạo biến động ngẫu nhiên hoặc thay giá thật bằng số mẫu.
 
@@ -40,6 +42,9 @@ Xem [ghi chú nguồn API](docs/DATA_SOURCES.md) và nút **Nguồn dữ liệu*
 ## Tính năng
 
 - Dashboard rộng với 4 chỉ số, biểu đồ tương tác, diễn giải chênh lệch, tỷ giá và tỷ lệ vàng/bạc.
+- Thanh giá chạy ngang ở đầu trang: XAU/USD, XAG/USD, giá bán vàng trong nước và USD/VND, kèm đơn vị, mốc nguồn và nhãn giá cũ nếu cần. Biến động trong nước theo nguồn công bố, không tự gán là 24 giờ.
+- Dòng tin vàng cố định ở cuối màn hình, liên kết tới bài gốc. Bàn tin RSS chuyển dọc từng bài mỗi 7 giây, chọn chủ đề vàng hoặc Fed, nút trước/sau và tạm dừng. Ưu tiên bài đăng trong ngày theo giờ Việt Nam; chưa có bài hôm nay sẽ ghi rõ tin gần nhất.
+- Thanh chạy dừng khi rê chuột, dùng bàn phím hoặc bấm tạm dừng. Ô tin dừng khi rê chuột/đặt focus vào ô; tôn trọng cài đặt giảm chuyển động của hệ điều hành. Chỉ lấy tiêu đề, giờ đăng và link nguồn; không sao chép nội dung bài báo.
 - Bảng 10 sản phẩm khi nguồn đủ dữ liệu, lọc nhóm, tìm thương hiệu, đổi đơn vị lượng/chỉ và tải CSV.
 - Kế hoạch tích sản: thu nhập, ngân sách %, thời gian, giả định tăng/giảm giá. Đây là mô phỏng do người dùng chọn, không phải dự báo hay lợi nhuận cam kết. Mô hình mua lượng vàng lẻ cuối tháng; thực tế cần đối chiếu quy cách bán và phí.
 - Két vàng ghi giao dịch, định giá bán lại theo **giá mua vào** của cửa hàng, hiển thị rõ phần chưa định giá. Sao lưu JSON và khôi phục có kiểm tra, không ghi đè giao dịch đã có cùng ID.

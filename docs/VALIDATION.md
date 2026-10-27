@@ -2,7 +2,7 @@
 
 ## Kết quả
 
-- `npm test`: **13/13** bài kiểm tra qua. Kiểm tra đơn vị ounce/lượng/chỉ, premium, DCA tăng trưởng âm và chênh mua–bán, định giá bán lại, parser nguồn thật, múi giờ Vietcombank, lịch sử không bù giá, cache gộp yêu cầu, mất nguồn, route API và file sao lưu.
+- `npm test`: **19/19** bài kiểm tra qua. Ngoài 13 bài cho giá/kế hoạch/két vàng, thêm 6 bài cho RSS: CDATA/entity, múi giờ, giới hạn link/DTD, sắp xếp/gộp trùng, hôm nay theo UTC+7, cache đồng thời, lỗi từng nguồn và hết hạn bản lưu.
 - `npm run build`: thành công. Giao diện tạo từ HTML/CSS/JS; không cần Flutter. Đầu ra `dist/` kèm Worker API cho Pages.
 - `npx wrangler deploy --dry-run`: thành công, binding ASSETS được nhận. Đây không phải publish.
 - Chạy API thật bằng cả Node local, Wrangler Workers và Wrangler Pages. Cả ba nhận được XAU/XAG, 10 sản phẩm trong nước, tỷ giá Vietcombank và lịch sử 7 ngày.
@@ -24,10 +24,24 @@
 
 Các giao dịch thử nằm trong profile Chrome kiểm tra riêng, không ghi vào két vàng của người dùng.
 
+## Thanh giá và bàn tin RSS
+
+- Node preview nhận dữ liệu RSS thật từ Vietstock và Federal Reserve; 2 tin vàng trong ngày xuất hiện với đúng giờ đăng và link nguồn.
+- Chrome xác nhận thanh giá chạy thật, nút dừng từng thanh, bản sao marquee ẩn khỏi cây truy cập bằng `aria-hidden` và `inert`.
+- Quan sát ô tin tự chuyển `01 / 02` sang `02 / 02`; kiểm tra tạm dừng giữ nguyên vị trí, nút lên/xuống, chuyển chủ đề Fed với nhãn chưa có tin hôm nay.
+- Tin cuối quay về tin đầu bằng đúng một nấc đi lên; bản sao chuyển vòng luôn `inert`/ẩn với trình đọc màn hình. Danh sách chủ đề Fed hiển thị đủ 6 bài và tự cuộn đến bài đang chọn.
+- Hover hoặc đặt focus vào ô tin giữ nguyên vị trí; khi rời ô tin thì tự chuyển tiếp. Đã thử lại thêm giao dịch két vàng và mở bảng nguồn dữ liệu trong giao diện mới.
+- Mất mạng RSS: giữ lại tiêu đề, đánh dấu bản lưu. Khi tất cả nguồn chưa có dữ liệu: trạng thái trống có nút thử lại, không tạo tin mẫu.
+- Cài đặt giảm chuyển động: thanh giá đứng yên, có thể cuộn ngang; không tự chuyển ô tin, vẫn đọc bằng nút trước/sau.
+- Giao diện mới không tràn ngang ở 390, 768, 1024, 1440 và 1920 px; tin đang chọn khớp đúng mép cửa sổ chuyển dọc trên điện thoại.
+- `wrangler deploy --dry-run` nhận Worker mở rộng RSS và 9 browser assets. Kiểm tra thêm bằng Pages/workerd để xác nhận `/api/news` hoạt động trong runtime Cloudflare.
+- Khắc phục khác biệt Node/workerd: Vietstock trả HTTP 403 khi User-Agent rỗng. Backend gửi định danh công khai `AurumSentinel/2.0` cùng link repo; xác nhận phản hồi 200 bằng workerd, không giả danh trình duyệt.
+
 ## Hình giao diện
 
 - [Desktop — màn hình đầu](dashboard-desktop.png)
 - [Mobile](dashboard-mobile.png)
+- [Bàn tin RSS](market-news-desk.png)
 
 ## Giới hạn còn lại
 

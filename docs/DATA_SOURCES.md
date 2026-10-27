@@ -9,6 +9,8 @@
 | vang.today lịch sử | `/api/prices?type=XAUUSD&days=30`; cũng dùng SJL1L10, SJ9999 | Không key; dữ liệu ngày | Cache 300 giây; giao diện 7/14/30 ngày |
 | [Vietcombank](https://www.vietcombank.com.vn/vi-VN/KHCN/Cong-cu-tien-ich/Ty-gia) | `https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx?b=10` | XML công khai cho tham khảo | Nguồn ghi “Only one request every 5 minutes”; app cache 300 giây |
 | [Currency API](https://github.com/fawazahmed0/exchange-api) | `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json` | Dữ liệu CC0, miễn phí, không key | Chỉ là dự phòng FX theo ngày; cache 6 giờ |
+| [Vietstock RSS](https://vietstock.vn/rss) | `https://vietstock.vn/759/hang-hoa/vang-va-kim-loai-quy.rss` | RSS công khai, không key; giữ tên nguồn và link bài gốc | Kiểm tra/cache 300 giây |
+| [Federal Reserve RSS](https://www.federalreserve.gov/feeds/feeds.htm) | `https://www.federalreserve.gov/feeds/press_monetary.xml` | RSS công khai của Federal Reserve Board, không key | Kiểm tra/cache 300 giây |
 
 Gold API trả giá theo troy ounce và `updatedAt` là lúc chính họ lấy giá từ nguồn, không phải timestamp khớp lệnh. Gold API có cả lịch sử nhưng các endpoint lịch sử cần key và gói miễn phí bị giới hạn, nên bản này lấy lịch sử ngày từ vang.today.
 
@@ -30,6 +32,16 @@ Backend phân biệt `ok`, `stale` (lấy từ bản lưu sau lỗi), `unavailab
 Khi mất mạng, bản giá gần nhất trong trình duyệt được đánh dấu bản lưu. Cảnh báo chỉ chạy nếu dữ liệu còn đủ mới. Không có giá mặc định hay biến động ngẫu nhiên trong dashboard mới.
 
 Cache trong mỗi runtime gộp các yêu cầu đồng thời; Cloudflare còn đặt TTL cho fetch nguồn. Đây không phải cam kết cập nhật đồng thời toàn thị trường hoặc SLA từ nhà cung cấp miễn phí.
+
+## RSS và các dòng thông tin chạy
+
+`GET /api/news` lấy hai feed cố định phía server để trình duyệt không gặp CORS. Không nhận URL tùy ý từ người dùng. Kết quả chỉ gồm tiêu đề, giờ đăng, tên nguồn, chủ đề và link bài gốc; không trả nội dung bài báo hoặc ảnh. RSS công khai không đồng nghĩa được cấp quyền sao chép toàn bộ bài báo.
+
+Kiểm tra thực ngày 27/10/2026: feed Vietstock trả 2 tin vàng trong ngày (11:02 và 08:36, giờ Việt Nam). Thông cáo Fed gần nhất ngày 13/10; giao diện chủ đề Fed ghi rõ **chưa có tin hôm nay**, giữ nguyên tiêu đề tiếng Anh. Số tin và tiêu đề thay đổi theo nhà xuất bản; đây không phải dữ liệu mẫu đóng sẵn.
+
+Bàn tin ưu tiên bài đăng hôm nay theo UTC+7, nếu chưa có thì dùng tin gần nhất. `publishedAt` là giờ đăng bài; `fetchedAt`/`checkedAt` là lần kiểm tra nguồn thành công. Khi nguồn lỗi, giữ nguyên các mốc và đánh dấu **bản lưu**; cache server quá 24 giờ sẽ bị bỏ. Một nguồn lỗi không làm mất tin nguồn còn lại. Parser loại bỏ DTD/entity XML, link ngoài tên miền nguồn, URL có thông tin đăng nhập và mốc tương lai bất thường; gộp tin trùng.
+
+Chuyển tin **7 giây** chỉ là nhịp trình bày; lấy RSS **5 phút** mới là nhịp kiểm tra bài mới. Hai thanh chạy và bàn tin đều dừng tương ứng khi hover/focus/tạm dừng, và tắt tự chuyển khi người dùng bật giảm chuyển động. Thanh giá lấy chung dữ liệu `/api/market`, không thêm các lượt gọi giá riêng.
 
 ## Lựa chọn khác đã xem
 

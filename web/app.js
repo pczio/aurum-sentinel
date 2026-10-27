@@ -1,4 +1,5 @@
 import { icons } from './icons.js';
+import { createMarketWire } from './market-wire.js';
 import { premium, projection, vaultTotals, fresh, alertValue, parseVaultBackup } from './domain.js';
 
 const $ = id => document.getElementById(id);
@@ -13,6 +14,7 @@ let storageFailed = false;
 function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
 function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { storageFailed = true; toast('Trình duyệt chưa cho phép lưu dữ liệu. Hãy sao lưu két vàng trước khi đóng trang.'); return false; } }
 let market = null, history = null, filter = 'all', busy = false, historyRequest = 0;
+const marketWire = createMarketWire();
 let historyDays = 30, historySymbol = 'XAUUSD';
 let vault = read(KEY.vault, null);
 let alerts = read(KEY.alerts, []);
@@ -79,6 +81,7 @@ async function refreshMarket(manual = false) {
 }
 
 function renderMarket(offline = false) {
+  marketWire.updateMarket(market);
   const sjc = quote('SJL1L10'), ring = quote('SJ9999');
   $('gold-value').textContent = usd(market?.gold?.price);
   $('sjc-value').textContent = sjc ? nf(sjc.sell / 1e6, 2) : '—';
@@ -251,6 +254,7 @@ function renderSources() {
     ['Bảng giá Việt Nam & lịch sử', market?.domestic, 1200, 'vang.today là nguồn tổng hợp độc lập, không phải API trực tiếp của SJC/DOJI/PNJ. Khoảng 5 phút/lần; giá gốc đồng/lượng. Biểu đồ là các điểm giá theo ngày, ngày hiện tại chưa chốt. Biến động bảng do nguồn công bố, không mặc định là 24 giờ.'],
     ['Tỷ giá USD / VND', market?.fx, 172800, 'Ưu tiên tỷ giá USD bán ra trong XML công khai Vietcombank, chỉ lấy tối đa mỗi 5 phút. Nếu không truy cập được, dùng Currency API theo ngày và ghi rõ nguồn dự phòng. Không phải giá giao dịch ngoại tệ tức thời.'],
   ].map(([title, resource, limit, description]) => `<article class="source-detail"><h3>${title}<span class="tag ${fresh(resource, Date.now(), limit) ? 'gold-tag' : 'neutral'}">${fresh(resource, Date.now(), limit) ? 'Đã kết nối' : resource?.updatedAt ? 'Bản lưu / chậm' : 'Chưa có dữ liệu'}</span></h3><p>${description}</p><p>${esc(meta(resource, limit))}</p><a href="${resource?.sourceUrl || (title.includes('spot') ? 'https://gold-api.com/faqs' : title.includes('Việt') ? 'https://www.vang.today/vi/api' : 'https://www.vietcombank.com.vn')}" target="_blank" rel="noopener noreferrer">Tài liệu / nguồn dữ liệu ↗</a></article>`).join('');
+  $('source-details').innerHTML += `<article class="source-detail"><h3>Bàn tin RSS & dòng tin cuối trang</h3><p>Vietstock: vàng và kim loại quý. Federal Reserve: thông cáo chính sách tiền tệ, giữ tiêu đề tiếng Anh của nguồn. Chỉ hiển thị tiêu đề, giờ đăng và link bài gốc; kiểm tra mỗi 5 phút, chuyển tin mỗi 7 giây. Không có tin hôm nay sẽ ghi rõ tin gần nhất.</p>${marketWire.newsSources().map(source => `<p>${esc(source.name)} · ${source.status === 'ok' ? 'kiểm tra thành công' : source.status === 'stale' ? 'bản lưu · kiểm tra thành công trước đó' : 'tạm mất kết nối'}${source.fetchedAt ? ' ' + dateTime(source.fetchedAt) : ''}</p>`).join('')}<a href="https://vietstock.vn/rss" target="_blank" rel="noopener noreferrer">Vietstock RSS ↗</a> · <a href="https://www.federalreserve.gov/feeds/feeds.htm" target="_blank" rel="noopener noreferrer">Federal Reserve RSS ↗</a></article>`;
 }
 
 function openVault() {
@@ -277,7 +281,7 @@ $('unit-select').addEventListener('change', renderQuotes);
 $('market-filters').addEventListener('click', event => { const button = event.target.closest('[data-filter]'); if (!button) return; filter = button.dataset.filter; $('market-filters').querySelectorAll('button').forEach(node => node.classList.toggle('selected', node === button)); renderQuotes(); });
 $('chart-period').addEventListener('click', event => { const button = event.target.closest('[data-days]'); if (!button) return; historyDays = Number(button.dataset.days); $('chart-period').querySelectorAll('button').forEach(node => { node.classList.toggle('selected', node === button); node.setAttribute('aria-pressed', String(node === button)); }); loadHistory(); });
 $('chart-symbol').addEventListener('change', event => { historySymbol = event.target.value; loadHistory(); });
-$('refresh-button').addEventListener('click', () => { refreshMarket(true); loadHistory(); });
+$('refresh-button').addEventListener('click', () => { refreshMarket(true); loadHistory(); marketWire.refreshNews(); });
 for (const id of ['sources-button', 'footer-sources']) $(id).addEventListener('click', () => { renderSources(); $('sources-dialog').showModal(); });
 for (const id of ['add-alert', 'header-alert']) $(id).addEventListener('click', openAlert);
 $('add-vault').addEventListener('click', openVault);

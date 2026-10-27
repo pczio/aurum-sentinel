@@ -6,6 +6,46 @@ const URLS = {
   fxBackup: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
 };
 
+// Fixed publisher feeds only: this endpoint never proxies a URL supplied by a visitor.
+export const NEWS_FEEDS = [
+  { id: 'vietstock-gold', name: 'Vietstock', topic: 'gold', url: 'https://vietstock.vn/759/hang-hoa/vang-va-kim-loai-quy.rss', site: 'https://vietstock.vn', hosts: ['vietstock.vn', 'www.vietstock.vn'] },
+  { id: 'fed-policy', name: 'Federal Reserve', topic: 'macro', url: 'https://www.federalreserve.gov/feeds/press_monetary.xml', site: 'https://www.federalreserve.gov', hosts: ['www.federalreserve.gov', 'federalreserve.gov'] },
+];
+
+function feedText(value = '') {
+  const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“' };
+  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, key) => {
+    if (key[0] !== '#') return entities[key.toLowerCase()] ?? match;
+    const code = key[1].toLowerCase() === 'x' ? parseInt(key.slice(2), 16) : Number(key.slice(1));
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : '';
+  }).replace(/<[^>]*>/g, '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function parseRss(xml, feed, now = Date.now()) {
+  if (typeof xml !== 'string' || xml.length > 1500000 || /<!DOCTYPE|<!ENTITY/i.test(xml) || !/<rss\b/i.test(xml)) throw new Error('Invalid RSS');
+  const tag = (body, name) => body.match(new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)<\\/${name}>`, 'i'))?.[1] || '';
+  const rows = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].slice(0, 100);
+  const items = rows.flatMap(([, body]) => {
+    const title = feedText(tag(body, 'title')).slice(0, 300);
+    const stamp = Date.parse(feedText(tag(body, 'pubDate')));
+    if (title.length < 8 || !Number.isFinite(stamp) || stamp > now + 300000 || stamp < now - 90 * 86400000) return [];
+    try {
+      const link = new URL(feedText(tag(body, 'link')));
+      if (!['http:', 'https:'].includes(link.protocol) || link.username || link.password || link.port || !feed.hosts.includes(link.hostname)) return [];
+      link.protocol = 'https:';
+      link.hash = '';
+      for (const key of [...link.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/i.test(key)) link.searchParams.delete(key);
+      return [{ id: link.href, title, url: link.href, publishedAt: new Date(stamp).toISOString(), source: feed.name, sourceId: feed.id, topic: feed.topic }];
+    } catch { return []; }
+  });
+  if (rows.length && !items.length) throw new Error('No usable RSS items');
+  const seen = new Set();
+  return items.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).filter(item => {
+    if (seen.has(item.url)) return false;
+    seen.add(item.url); return true;
+  }).slice(0, 30);
+}
+
 const PRODUCTS = {
   SJL1L10: ['SJC', 'Vàng miếng SJC 9999', 'bar'],
   SJ9999: ['SJC', 'Nhẫn SJC 9999', 'ring'],
@@ -81,7 +121,8 @@ export function createMarketApi({ fetcher = globalThis.fetch, now = Date.now } =
   const inflight = new Map();
 
   async function read(url, ttl, format = 'json') {
-    const response = await fetcher(url, { headers: { Accept: format === 'json' ? 'application/json' : 'application/xml,text/xml,*/*' }, signal: AbortSignal.timeout(10000), cf: { cacheTtl: ttl, cacheEverything: true } });
+    // Some publishers reject Workers' empty default User-Agent. Identify our reader explicitly.
+    const response = await fetcher(url, { headers: { Accept: format === 'json' ? 'application/json' : 'application/rss+xml,application/xml,text/xml,*/*', 'User-Agent': 'AurumSentinel/2.0 (market and RSS reader; +https://github.com/pczio/aurum-sentinel)' }, signal: AbortSignal.timeout(10000), cf: { cacheTtl: ttl, cacheEverything: true } });
     if (!response.ok) throw new Error(`Upstream ${response.status}`);
     const text = await response.text();
     if (text.length > 1500000) throw new Error('Response too large');
@@ -134,6 +175,20 @@ export function createMarketApi({ fetcher = globalThis.fetch, now = Date.now } =
     if (url.pathname === '/api/market') {
       const [gold, silver, vietnam, currency] = await Promise.all([metal('gold', 'XAU'), metal('silver', 'XAG'), domestic(), fx()]);
       return json({ servedAt: new Date(now()).toISOString(), refreshSeconds: 30, gold, silver, domestic: vietnam, fx: currency });
+    }
+    if (url.pathname === '/api/news') {
+      const results = await Promise.all(NEWS_FEEDS.map(feed => resource(`news:${feed.id}`, 300, async () => {
+        const items = parseRss(await read(feed.url, 300, 'text'), feed, now());
+        return { items, updatedAt: items[0]?.publishedAt || null, source: feed.name };
+      }, feed.name)));
+      const items = results.flatMap((result, index) => (result.items || []).map(item => ({ ...item, status: result.status, checkedAt: result.fetchedAt, sourceId: NEWS_FEEDS[index].id }))).sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+      const seen = new Set();
+      const unique = items.filter(item => {
+        const key = item.title.toLocaleLowerCase('vi').normalize('NFC');
+        if (seen.has(item.url) || seen.has(key)) return false;
+        seen.add(item.url); seen.add(key); return true;
+      });
+      return json({ servedAt: new Date(now()).toISOString(), refreshSeconds: 300, items: unique.slice(0, 50), sources: NEWS_FEEDS.map((feed, index) => ({ id: feed.id, name: feed.name, topic: feed.topic, url: feed.site, feedUrl: feed.url, status: results[index].status, fetchedAt: results[index].fetchedAt || null, updatedAt: results[index].updatedAt || null })) });
     }
     if (url.pathname === '/api/history') {
       const symbol = url.searchParams.get('symbol') || 'XAUUSD';

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'dist');
 await mkdir(output, { recursive: true });
-const assets = ['index.html', 'styles.css', 'app.js', 'domain.js', 'icons.js', 'favicon.svg', 'manifest.json'];
+const assets = ['index.html', 'styles.css', 'wire.css', 'app.js', 'market-wire.js', 'domain.js', 'icons.js', 'favicon.svg', 'manifest.json'];
 for (const name of assets) await copyFile(path.join(root, 'web', name), path.join(output, name));
 await copyFile(path.join(root, 'cloudflare', '_headers'), path.join(output, '_headers'));
 await copyFile(path.join(root, 'server', 'worker.mjs'), path.join(output, '_worker.js'));
